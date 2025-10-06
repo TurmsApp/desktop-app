@@ -1,4 +1,4 @@
 //! models for SQLite.
 
-pub mod user;
 pub mod keys;
+pub mod user;

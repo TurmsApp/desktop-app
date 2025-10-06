@@ -1,11 +1,10 @@
 //! User model.
 
-use super::keys::Keys;
 use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 /// Represents receiver and sender.
 pub struct User {
     /// Unique identifier in Turms format.
@@ -20,7 +19,18 @@ pub struct User {
     /// If user is sender.
     /// JsonWebToken (JWT) plain string.
     pub token: Option<String>,
-    /// Public and private (if user is sender) keys.
+    /* /// Public and private (if user is sender) keys.
     #[serde(skip_serializing, skip_deserializing)]
-    pub keys: Keys,
+    pub keys: Keys, */
+}
+
+impl User {
+    /// Create a new [`User`] instance.
+    pub fn new<T: ToString>(id: T, username: T) -> Self {
+        Self {
+            id: id.to_string(),
+            username: username.to_string(),
+            ..Default::default()
+        }
+    }
 }

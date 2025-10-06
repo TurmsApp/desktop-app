@@ -1,9 +1,13 @@
 //! SQLite manager with pre-made queries.
 
-use crate::models::{keys::Keys, user::User};
 use chrono::{TimeZone, Utc};
 use rusqlite::{Connection, Result};
+
 use std::path::Path;
+use std::sync::Arc;
+use std::sync::Mutex;
+
+use crate::models::user::User;
 
 /// Methods to identify one or more rows.
 pub enum Get {
@@ -11,77 +15,58 @@ pub enum Get {
     Token(String),
 }
 
-/// Easly manage SQLite database.
-///
-/// For future, if database changes, it would be easier to
-/// switch database.
+/// SQLite manager.
+#[derive(Debug, Clone)]
 pub struct Database {
-    connection: Connection,
-    /// Actual user.
-    pub me: Option<User>,
+    connection: Arc<Mutex<Connection>>,
 }
 
 impl Database {
     /// Create a new [`Database`] instance.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: P, key: String) -> Result<Self> {
         let conn = Connection::open(path)?;
-
-        //conn.query_row("SELECT id, username WHERE id = ?", [], |row| row.get(0));
+        conn.pragma_update(None, "key", format!("aes256:{key}"))?;
 
         Ok(Database {
-            connection: conn,
-            me: None,
+            connection: Arc::new(Mutex::new(conn)),
         })
+    }
+
+    pub fn set_user(&self, _user: User) -> Result<()> {
+        Ok(())
     }
 
     /// Get a user from database.
     pub fn get_user(&self, identifier: Get) -> Result<User> {
         match identifier {
-            Get::Id(id) => {
-                self.connection.query_row(
-                    "SELECT username, avatar, relation WHERE id = ?",
-                    [id.to_owned()],
-                    move |row| {
-                        Ok(User {
-                            id,
-                            username: row.get(0)?,
-                            avatar: row.get(1)?,
-                            token: None,
-                            keys: Keys {
-                                public_key: None,
-                                private_key: None,
-                                ratchet: None,
-                            },
-                            relation: Utc
-                                .timestamp_opt(
-                                    row.get::<usize, i64>(2)? as i64,
-                                    0,
-                                )
-                                .earliest()
-                                .unwrap_or(Utc::now()),
-                        })
-                    },
-                )
-            },
-            Get::Token(jwt) => {
+            Get::Id(id) => self.connection.lock().unwrap().query_row(
+                "SELECT username, avatar, relation WHERE id = ?",
+                [id.to_owned()],
+                move |row| {
+                    Ok(User {
+                        id,
+                        username: row.get(0)?,
+                        avatar: row.get(1)?,
+                        token: None,
+                        relation: Utc
+                            .timestamp_opt(row.get::<usize, i64>(2)?, 0)
+                            .earliest()
+                            .unwrap_or(Utc::now()),
+                    })
+                },
+            ),
+            Get::Token(_jwt) => {
                 // Read JWT token and extract ID, then fetch.
                 //self.get_user(id)?
-                Ok(User {
-                    id: String::default(),
-                    username: String::default(),
-                    avatar: None,
-                    token: Some(jwt),
-                    keys: Keys::default(),
-                    relation: Utc::now(),
-                })
-            },
+                unimplemented!();
+            }
         }
     }
 
     /// Create tables if not exists.
     pub fn create_tables(&self) -> Result<()> {
-        self.connection.execute(
-            "CREATE TABLE users (
+        self.connection.lock().unwrap().execute(
+            "CREATE TABLE IF NOT EXISTS users (
                 id       INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
                 avatar   TEXT,

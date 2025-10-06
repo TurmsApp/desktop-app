@@ -1,6 +1,6 @@
 //! Key-related models.
 
-use generic_array::{typenum::U32, GenericArray};
+/*use generic_array::{typenum::U32, GenericArray};
 
 pub type RatchetKey = GenericArray<u8, U32>;
 
@@ -22,3 +22,4 @@ pub struct Keys {
     /// Keys related to Double Ratchet algorithm.
     pub ratchet: Option<Ratchet>,
 }
+*/
