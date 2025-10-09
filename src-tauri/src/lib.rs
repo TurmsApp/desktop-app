@@ -35,7 +35,7 @@ fn init_state(path: PathBuf) -> Result<State> {
             use rand_chacha::ChaCha20Rng;
 
             let mut seed = [0u8; 32];
-            let _ = OsRng.try_fill_bytes(&mut seed);
+            OsRng.try_fill_bytes(&mut seed)?;
 
             let mut key = [0u8; 32];
             let mut rng = ChaCha20Rng::from_seed(seed);
@@ -60,11 +60,11 @@ fn init_state(path: PathBuf) -> Result<State> {
     // If previously connected, reconnect.
     if let Ok((user, config)) = state.database.get_user(database::Get::Me) {
         state.user = Some(user);
-        let config = serde_yaml::to_string(&config.unwrap())
-            .map_err(|e| e.to_string())
-            .unwrap();
-        state.turms =
-            Some(Turms::from_config(libturms::ConfigFinder::<String>::Text(config)).unwrap());
+        // Configuration is supplied by default.
+        let config = serde_yaml::to_string(&config.unwrap())?;
+        state.turms = Some(Turms::from_config(libturms::ConfigFinder::<String>::Text(
+            config,
+        ))?);
     }
 
     Ok(state)

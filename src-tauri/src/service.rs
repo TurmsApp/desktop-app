@@ -15,6 +15,8 @@ pub async fn init(
     _password: Option<String>,
     turms_url: Option<String>,
 ) -> Result<(), String> {
+    // Init default instances.
+    // Only STUN/TURN servers.
     let config = Config {
         turms_url,
         rtc: vec![IceServer {
@@ -23,8 +25,8 @@ pub async fn init(
         }],
     };
     let yamlconfig = serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
-
-    let turms = Turms::from_config(ConfigFinder::<String>::Text(yamlconfig)).unwrap();
+    let turms =
+        Turms::from_config(ConfigFinder::<String>::Text(yamlconfig)).map_err(|e| e.to_string())?;
     state.lock().await.turms = Some(turms);
 
     match username {
@@ -36,7 +38,7 @@ pub async fn init(
                 .await
                 .database
                 .create_user(&user, Some(config))
-                .unwrap();
+                .map_err(|_| "user not created".to_string())?;
             state.lock().await.user = Some(user);
         }
     };
