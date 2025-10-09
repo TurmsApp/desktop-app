@@ -15,7 +15,10 @@ const openAuthPage = async () => {
 
 const asGuest = () => {
 	invoke("init", {})
-		.then((_) => console.info("success login, connected as guest"), router.push("/conversation/"))
+		.then(
+			(_) => console.info("success login, connected as guest"),
+			router.push("/conversation/"),
+		)
 		.catch((error) => console.error(error));
 };
 </script>
@@ -36,9 +39,9 @@ const asGuest = () => {
 		</PrimaryButton>
 
 		<div class="flex mt-4 items-center text-center w-[23rem]">
-			<hr class="border-zinc-300 border-1 w-full rounded-md" />
+			<hr class="border-zinc-600 border-1 w-full rounded-md" />
 			<label class="block font-medium text-sm text-zinc-600 w-full"> OR </label>
-			<hr class="border-zinc-300 border-1 w-full rounded-md" />
+			<hr class="border-zinc-600 border-1 w-full rounded-md" />
 		</div>
 
 		<SecondaryButton
@@ -51,7 +54,7 @@ const asGuest = () => {
 		<span
 			@click="asGuest"
 			tabindex="0"
-			class="flex cursor-pointer underline mt-6 xl:ml-1 text-md xl:text-lg text-zinc-500 dark:text-zinc-400"
+			class="flex cursor-pointer underline mt-6 xl:ml-1 text-md xl:text-lg text-black dark:text-white"
 		>
 			For privacy, I prefer to continue as guest
 			<ChevronRightIcon class="mt-1.5 size-4" />

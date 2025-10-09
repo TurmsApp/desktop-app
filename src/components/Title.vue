@@ -10,7 +10,7 @@ const props = defineProps({
 		{{ props.title }}
 	</h1>
 
-	<h2 class="mt-2 text-zinc-500">
+	<h2 class="mt-2 text-zinc-600">
 		{{ props.description }}
 	</h2>
 </template>

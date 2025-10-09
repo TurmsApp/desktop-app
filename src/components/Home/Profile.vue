@@ -4,10 +4,10 @@ import { UserIcon } from "@heroicons/vue/24/outline";
 
 <template>
 	<div
-		class="flex flex-col items-center bg-violet-100 border border-zinc-200 mt-4 w-full py-6 px-4 rounded-lg"
+		class="flex flex-col items-center bg-violet-100/30 mt-4 w-full py-6 px-4 rounded-lg"
 	>
 		<div class="h-20 w-20 rounded-full border overflow-hidden">
-			<div class="h-full w-full bg-zinc-300 flex items-center justify-center">
+			<div class="h-full w-full bg-white/20 flex items-center justify-center">
 				<UserIcon class="size-12" />
 			</div>
 		</div>

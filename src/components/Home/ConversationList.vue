@@ -27,7 +27,7 @@ const user = [];
 				draggable="false"
 			>
 				<div
-					class="flex items-center justify-center size-8 bg-violet-100 rounded-full select-none font-semibold"
+					class="flex items-center justify-center size-8 bg-violet-100/30 rounded-full select-none font-semibold"
 				>
 					{{ user[0].username[0] }}
 				</div>

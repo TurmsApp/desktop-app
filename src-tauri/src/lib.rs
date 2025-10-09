@@ -98,8 +98,18 @@ pub fn run() {
             app.manage(Mutex::new(state));
 
             let window = app.get_webview_window("main").unwrap();
+
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
+                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)?;
+            }
+            #[cfg(target_os = "windows")]
+            let _ = window_vibrancy::apply_mica(&window, None);
+
             #[cfg(debug_assertions)]
             window.open_devtools();
+
             window.show()?;
             Ok(())
         })

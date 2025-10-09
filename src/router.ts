@@ -8,8 +8,16 @@ import { authentificator } from "./middleware";
 
 const routes = [
 	{ path: "/", component: Connect, beforeEnter: [authentificator] },
-	{ path: "/conversation", component: Conversation, afterEnter: [authentificator] }, // equivalent to home.
-	{ path: "/conversation/:id", component: Conversation, afterEnter: [authentificator] },
+	{
+		path: "/conversation",
+		component: Conversation,
+		afterEnter: [authentificator],
+	}, // equivalent to home.
+	{
+		path: "/conversation/:id",
+		component: Conversation,
+		afterEnter: [authentificator],
+	},
 	{ path: "/configure", component: Configure },
 ];
 

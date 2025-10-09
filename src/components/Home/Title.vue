@@ -5,7 +5,7 @@ import Tooltip from "../Button/Tooltip.vue";
 
 <template>
 	<div class="flex flex-row items-center justify-center h-12 w-full">
-		<div class="bg-violet-100 p-1.5 rounded">
+		<div class="bg-violet-100/30 p-1.5 rounded">
 			<Tooltip
 				text="Conversations are end to end encrypted using rotating keys."
 			>
