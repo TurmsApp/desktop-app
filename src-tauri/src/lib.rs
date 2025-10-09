@@ -4,14 +4,16 @@ mod database;
 pub mod models;
 pub(crate) mod service;
 
+use anyhow::Result;
 use keyring::Entry;
 use libturms::Turms;
 use rand::{Rng, TryRngCore};
 use tauri::Manager;
-use tokio::sync::Mutex;
+use tauri::async_runtime::Mutex;
+
+use std::path::PathBuf;
 
 use crate::database::Database;
-use crate::models::user::User;
 
 #[derive(Debug)]
 pub(crate) struct State {
@@ -21,9 +23,9 @@ pub(crate) struct State {
     pub(crate) database: Database,
 }
 
-async fn init_state() -> State {
+fn init_state(path: PathBuf) -> Result<State> {
     // Get security key to decrypt database.
-    let entry = Entry::new("turms", "key").unwrap();
+    let entry = Entry::new("turms", "key")?;
     let key = match entry.get_secret() {
         Ok(key) => key,
         Err(_) => {
@@ -45,9 +47,9 @@ async fn init_state() -> State {
     };
 
     // Init database.
-    let database =
-        Database::new("./encrypted.db3", hex::encode(key)).expect("cannot create database");
-    //state.database.create_tables().unwrap();
+    let database = Database::new(path.join("encrypted.db3"), hex::encode(key))
+        .expect("cannot create database");
+    database.create_tables()?;
 
     let mut state = State {
         turms: None,
@@ -56,44 +58,26 @@ async fn init_state() -> State {
     };
 
     // If previously connected, reconnect.
-    state.user = Entry::new("turms", "user_id")
-        .unwrap()
-        .get_password()
-        .ok()
-        .map(|user_id| User::new(user_id, "Guest".into()));
+    if let Ok((user, config)) = state.database.get_user(database::Get::Me) {
+        state.user = Some(user);
+        let config = serde_yaml::to_string(&config.unwrap())
+            .map_err(|e| e.to_string())
+            .unwrap();
+        state.turms =
+            Some(Turms::from_config(libturms::ConfigFinder::<String>::Text(config)).unwrap());
+    }
 
-    // Connect to Turms instance.
-    let config = libturms::Config {
-        turms_url: None,
-        rtc: vec![libturms::IceServer {
-            urls: vec!["stun:stun.l.google.com:19302".into()],
-            ..Default::default()
-        }],
-    };
-    let config = serde_yaml::to_string(&config)
-        .map_err(|e| e.to_string())
-        .unwrap();
-    state.turms = Some(
-        Turms::from_config(libturms::ConfigFinder::<String>::Text(config))
-            .await
-            .unwrap(),
-    );
-
-    state
+    Ok(state)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub async fn run() {
-    let state = init_state().await;
-
+pub fn run() {
     let ctx = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_stronghold::Builder::new(|_pass| todo!()).build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
@@ -102,13 +86,21 @@ pub async fn run() {
             service::generate_offer
         ])
         .setup(|app| {
-            #[cfg(debug_assertions)]
-            {
-                let main_window = app.get_webview_window("main").unwrap();
-                main_window.open_devtools();
-            }
+            let path = if cfg!(debug_assertions) {
+                app.path().app_cache_dir()
+            } else {
+                app.path().app_data_dir()
+            };
+
+            // Crash if secure boot is not guaranteed.
+            let state = init_state(path?).expect("secure boot failed");
+
             app.manage(Mutex::new(state));
 
+            let window = app.get_webview_window("main").unwrap();
+            #[cfg(debug_assertions)]
+            window.open_devtools();
+            window.show()?;
             Ok(())
         })
         .run(ctx)

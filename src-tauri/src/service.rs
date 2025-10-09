@@ -1,8 +1,7 @@
 //! Chat service using libturms.
 
-use keyring::Entry;
 use libturms::{Config, ConfigFinder, IceServer, Turms};
-use tokio::sync::Mutex;
+use tauri::async_runtime::Mutex;
 
 use crate::models::user::User;
 
@@ -12,7 +11,7 @@ pub type State<'a> = tauri::State<'a, Mutex<crate::State>>;
 #[tauri::command]
 pub async fn init(
     state: State<'_>,
-    _username: Option<String>,
+    username: Option<String>,
     _password: Option<String>,
     turms_url: Option<String>,
 ) -> Result<(), String> {
@@ -23,18 +22,24 @@ pub async fn init(
             ..Default::default()
         }],
     };
-    let config = serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
+    let yamlconfig = serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
 
-    let turms = Turms::from_config(ConfigFinder::<String>::Text(config))
-        .await
-        .unwrap();
+    let turms = Turms::from_config(ConfigFinder::<String>::Text(yamlconfig)).unwrap();
     state.lock().await.turms = Some(turms);
-    state.lock().await.user = Some(User::new("guest", "Guest"));
 
-    Entry::new("turms", "user_id")
-        .unwrap()
-        .set_password("guest")
-        .unwrap();
+    match username {
+        Some(_) => unimplemented!(),
+        None => {
+            let user = User::new("guest", "Guest");
+            state
+                .lock()
+                .await
+                .database
+                .create_user(&user, Some(config))
+                .unwrap();
+            state.lock().await.user = Some(user);
+        }
+    };
 
     Ok(())
 }
