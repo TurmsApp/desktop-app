@@ -99,7 +99,10 @@ impl Database {
             Get::Me => {
                 Ok(conn
                 .query_row(
-                    "SELECT id, username, avatar, relation_date, config FROM users WHERE config IS NOT NULL AND config <> '';",
+                    "SELECT
+                        id, username, avatar, relation_date, config
+                        FROM users
+                        WHERE config IS NOT NULL AND config <> ''",
                     [],
                     move |row| {
                         Ok((User {
@@ -117,6 +120,35 @@ impl Database {
                 )?)
             }
         }
+    }
+
+    pub fn get_conversations(&self) -> Result<Vec<User>> {
+        let conn = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow!("mutex is poisoned"))?;
+
+        let mut statement = conn
+            .prepare("SELECT id, trust_level, username, avatar, relation_date, public_key, state FROM users WHERE config IS NULL OR config = ''")?;
+
+        let users = statement
+            .query_map([], |row| {
+                Ok(User {
+                    id: row.get(0)?,
+                    trust_level: row.get(1)?,
+                    username: row.get(2)?,
+                    avatar: row.get(3)?,
+                    relation: Utc
+                        .timestamp_opt(row.get::<usize, i64>(4)?, 0)
+                        .earliest()
+                        .unwrap_or(Utc::now()),
+                    //public_key: row.get(5)?,
+                    ..Default::default()
+                })
+            })?
+            .filter_map(|user| user.ok());
+
+        Ok(users.collect())
     }
 
     /// Create tables if not exists.

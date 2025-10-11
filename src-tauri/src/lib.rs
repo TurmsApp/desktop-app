@@ -88,7 +88,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             service::init,
             service::get_user,
-            service::generate_offer
+            service::generate_offer,
+            service::get_conversations,
         ])
         .setup(|app| {
             let path = if cfg!(debug_assertions) {
