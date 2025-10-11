@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct User {
     /// Unique identifier in Turms format.
     pub id: String,
+    pub trust_level: u8,
     /// Public name.
     pub username: String,
     /// Public profile picture.
@@ -16,12 +17,8 @@ pub struct User {
     /// Date on which the two users first communicated.
     #[serde(with = "ts_milliseconds")]
     pub relation: DateTime<Utc>,
-    /// If user is sender.
-    /// JsonWebToken (JWT) plain string.
-    pub token: Option<String>,
-    /* /// Public and private (if user is sender) keys.
-    #[serde(skip_serializing, skip_deserializing)]
-    pub keys: Keys, */
+    /// User public key.
+    pub public_key: Vec<u8>,
 }
 
 impl User {

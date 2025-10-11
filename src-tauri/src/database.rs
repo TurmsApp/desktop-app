@@ -32,6 +32,7 @@ impl Database {
     pub fn new<P: AsRef<Path>>(path: P, key: String) -> Result<Self> {
         let conn = Connection::open(path)?;
         conn.pragma_update(None, "key", format!("aes256:{key}"))?;
+        conn.pragma_update(None, "foreign_keys", "ON")?;
 
         Ok(Database {
             connection: Arc::new(Mutex::new(conn)),
@@ -52,7 +53,7 @@ impl Database {
             .lock()
             .map_err(|_| anyhow!("mutex is poisoned"))?
             .execute(
-                "INSERT INTO users (id, username, relation_date, config) VALUES (?, ?, ?, ?)",
+                "INSERT INTO users (id, trust_level, username, relation_date, config) VALUES (?, 0, ?, ?, ?)",
                 [
                     &user.id as &dyn ToSql,
                     &user.username as &dyn ToSql,
@@ -74,18 +75,19 @@ impl Database {
         match identifier {
             Get::Id(id) => Ok(conn
                 .query_row(
-                    "SELECT username, avatar, relation_date, long_key FROM users WHERE id = ?",
+                    "SELECT username, trust_level, avatar, relation_date, public_key, state FROM users WHERE id = ?",
                     [id.clone()],
                     move |row| {
                         Ok((User {
                             id,
                             username: row.get(0)?,
-                            avatar: row.get(1)?,
-                            token: None,
+                            trust_level: row.get(1)?,
+                            avatar: row.get(2)?,
                             relation: Utc
-                                .timestamp_opt(row.get::<usize, i64>(2)?, 0)
+                                .timestamp_opt(row.get::<usize, i64>(3)?, 0)
                                 .earliest()
                                 .unwrap_or(Utc::now()),
+                            public_key: row.get(4)?,
                         }, None))
                     },
                 )?),
@@ -97,19 +99,20 @@ impl Database {
             Get::Me => {
                 Ok(conn
                 .query_row(
-                    "SELECT id, username, avatar, relation_date, public_key, private_key, config FROM users WHERE config IS NOT NULL AND config <> '';",
+                    "SELECT id, username, avatar, relation_date, config FROM users WHERE config IS NOT NULL AND config <> '';",
                     [],
                     move |row| {
                         Ok((User {
                             id: row.get(0)?,
+                            trust_level: 1,
                             username: row.get(1)?,
                             avatar: row.get(2)?,
-                            token: None,
                             relation: Utc
                                 .timestamp_opt(row.get::<usize, i64>(3)?, 0)
                                 .earliest()
                                 .unwrap_or(Utc::now()),
-                        }, Some(serde_json::from_str(&row.get::<usize, String>(6)?).unwrap())))
+                            ..Default::default()
+                        }, Some(serde_json::from_str(&row.get::<usize, String>(4)?).unwrap())))
                     },
                 )?)
             }
@@ -118,20 +121,35 @@ impl Database {
 
     /// Create tables if not exists.
     pub fn create_tables(&self) -> Result<()> {
-        self.connection
+        let conn = self
+            .connection
             .lock()
-            .map_err(|_| anyhow!("mutex is poisoned"))?
-            .execute(
-                "CREATE TABLE IF NOT EXISTS users (
+            .map_err(|_| anyhow!("mutex is poisoned"))?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS users (
                 id              TEXT PRIMARY KEY,
+                trust_level     INTEGER NOT NULL,
                 username        TEXT NOT NULL,
                 avatar          TEXT,
                 relation_date   INTEGER NOT NULL,
                 config          TEXT,
                 public_key      BLOB,
-                private_key     BLOB)",
-                (),
-            )?;
+                state           BLOB)",
+            (),
+        )?;
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS messages (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            ciphertext  TEXT,
+            flags       INTEGER,
+            reference   REFERENCES messages(id),
+            state       BLOB,
+            FOREIGN KEY (user_id) REFERENCES users(id))",
+            (),
+        )?;
+
         Ok(())
     }
 }
