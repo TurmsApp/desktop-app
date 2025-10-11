@@ -6,6 +6,7 @@ import { ChevronLeftIcon } from "@heroicons/vue/24/outline";
 import { QuestionMarkCircleIcon } from "@heroicons/vue/24/solid";
 import Tooltip from "../components/Button/Tooltip.vue";
 import { ref } from "vue";
+import { RouterLink } from "vue-router";
 
 const step = ref(1);
 const discoveryTooltip = ref(false);

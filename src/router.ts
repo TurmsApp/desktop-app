@@ -4,19 +4,19 @@ import Conversation from "./pages/Conversation.vue";
 import Connect from "./pages/Connect.vue";
 import Configure from "./pages/Configure.vue";
 
-import { authentificator } from "./middleware";
+import { redirectIfConnected, authentificator } from "./middleware";
 
 const routes = [
-	{ path: "/", component: Connect, beforeEnter: [authentificator] },
+	{ path: "/", component: Connect, beforeEnter: [redirectIfConnected] },
 	{
 		path: "/conversation",
 		component: Conversation,
-		afterEnter: [authentificator],
+		beforeEnter: [authentificator],
 	}, // equivalent to home.
 	{
 		path: "/conversation/:id",
 		component: Conversation,
-		afterEnter: [authentificator],
+		beforeEnter: [authentificator],
 	},
 	{ path: "/configure", component: Configure },
 ];
