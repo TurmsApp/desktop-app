@@ -9,7 +9,6 @@ use anyhow::Result;
 use keyring::{Entry, Error::NoEntry};
 use libturms::Turms;
 use rand::{Rng, TryRngCore};
-use tauri::async_runtime::Mutex;
 use tauri::{App, Manager};
 
 use std::path::PathBuf;
@@ -26,7 +25,8 @@ pub(crate) struct State {
 
 fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
     // Get security key to decrypt database.
-    let entry = Entry::new("turms", "key").map_err(|_| errors::unauthorized_key(app))?;
+    let entry = Entry::new("turms", "key")
+        .map_err(|_| errors::unauthorized_key(app))?;
     let key = match entry.get_secret() {
         Ok(key) => key,
         Err(NoEntry) => {
@@ -44,11 +44,11 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
             let key = key.to_vec();
             entry.set_secret(&key).expect("cannot save secure key");
             key
-        }
+        },
         Err(_) => errors::unauthorized_key(app),
     };
 
-    // Init database
+    // Init database.
     let db_path = path.join("encrypted.db3");
     let database = Database::new(&db_path, hex::encode(key))?;
     database
@@ -66,9 +66,9 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
         state.user = Some(user);
         // Configuration is supplied by default.
         let config = serde_yaml::to_string(&config.unwrap())?;
-        state.turms = Some(Turms::from_config(libturms::ConfigFinder::<String>::Text(
-            config,
-        ))?);
+        state.turms = Some(Turms::from_config(
+            libturms::ConfigFinder::<String>::Text(config),
+        )?);
     }
 
     Ok(state)
@@ -101,14 +101,19 @@ pub fn run() {
             // Crash if secure boot is not guaranteed.
             let state = init_state(app, path?).expect("secure boot failed");
 
-            app.manage(Mutex::new(state));
+            app.manage(state);
 
             let window = app.get_webview_window("main").unwrap();
 
             #[cfg(target_os = "macos")]
             {
                 use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
-                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)?;
+                apply_vibrancy(
+                    &window,
+                    NSVisualEffectMaterial::HudWindow,
+                    None,
+                    None,
+                )?;
             }
             #[cfg(target_os = "windows")]
             let _ = window_vibrancy::apply_mica(&window, None);

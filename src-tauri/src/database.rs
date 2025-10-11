@@ -40,7 +40,11 @@ impl Database {
     }
 
     /// Insert a user in database.
-    pub fn create_user(&self, user: &User, config: Option<Config>) -> Result<()> {
+    pub fn create_user(
+        &self,
+        user: &User,
+        config: Option<Config>,
+    ) -> Result<()> {
         let config = config
             .map(|c| {
                 serde_json::to_string(&c)
