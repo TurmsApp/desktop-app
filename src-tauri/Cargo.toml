@@ -18,6 +18,9 @@ opt-level = "s"
 panic = "abort"
 strip = true
 
+[profile.release.package.libturms]
+opt-level = 3
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -47,3 +50,4 @@ keyring = { version = "3", features = ["apple-native", "windows-native", "sync-s
 
 # Related to telecommunication.
 libturms = { git = "https://github.com/TurmsApp/libturms" }
+tauri-plugin-process = "2"

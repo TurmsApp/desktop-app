@@ -1,15 +1,16 @@
 //! Tauri stuff.
 
 mod database;
+mod errors;
 pub mod models;
 pub(crate) mod service;
 
 use anyhow::Result;
-use keyring::Entry;
+use keyring::{Entry, Error::NoEntry};
 use libturms::Turms;
 use rand::{Rng, TryRngCore};
-use tauri::Manager;
 use tauri::async_runtime::Mutex;
+use tauri::{App, Manager};
 
 use std::path::PathBuf;
 
@@ -23,12 +24,12 @@ pub(crate) struct State {
     pub(crate) database: Database,
 }
 
-fn init_state(path: PathBuf) -> Result<State> {
+fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
     // Get security key to decrypt database.
-    let entry = Entry::new("turms", "key")?;
+    let entry = Entry::new("turms", "key").map_err(|_| errors::unauthorized_key(app))?;
     let key = match entry.get_secret() {
         Ok(key) => key,
-        Err(_) => {
+        Err(NoEntry) => {
             // Generate a random 256 bits key.
             use rand::SeedableRng;
             use rand::rngs::OsRng;
@@ -44,12 +45,15 @@ fn init_state(path: PathBuf) -> Result<State> {
             entry.set_secret(&key).expect("cannot save secure key");
             key
         }
+        Err(_) => errors::unauthorized_key(app),
     };
 
-    // Init database.
-    let database = Database::new(path.join("encrypted.db3"), hex::encode(key))
-        .expect("cannot create database");
-    database.create_tables()?;
+    // Init database
+    let db_path = path.join("encrypted.db3");
+    let database = Database::new(&db_path, hex::encode(key))?;
+    database
+        .create_tables()
+        .map_err(|_| errors::corrupted_db(app, db_path))?;
 
     let mut state = State {
         turms: None,
@@ -74,6 +78,7 @@ fn init_state(path: PathBuf) -> Result<State> {
 pub fn run() {
     let ctx = tauri::generate_context!();
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -93,7 +98,7 @@ pub fn run() {
             };
 
             // Crash if secure boot is not guaranteed.
-            let state = init_state(path?).expect("secure boot failed");
+            let state = init_state(app, path?).expect("secure boot failed");
 
             app.manage(Mutex::new(state));
 
