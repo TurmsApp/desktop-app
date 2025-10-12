@@ -38,7 +38,7 @@ const asGuest = () => {
 			Continue with Gravitalia
 		</PrimaryButton>
 
-		<div class="flex mt-4 items-center text-center w-[23rem]">
+		<!-- <div class="flex mt-4 items-center text-center w-[23rem]">
 			<hr class="border-zinc-600 border-1 w-full rounded-md" />
 			<label class="block font-medium text-sm text-zinc-600 w-full"> OR </label>
 			<hr class="border-zinc-600 border-1 w-full rounded-md" />
@@ -49,7 +49,7 @@ const asGuest = () => {
 			@click="router.push('/configure')"
 		>
 			Configure your own instance
-		</SecondaryButton>
+		</SecondaryButton> -->
 
 		<span
 			@click="asGuest"

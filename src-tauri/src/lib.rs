@@ -10,6 +10,7 @@ use keyring::{Entry, Error::NoEntry};
 use libturms::Turms;
 use rand::{Rng, TryRngCore};
 use tauri::{App, Manager};
+use tauri::async_runtime::Mutex;
 
 use std::path::PathBuf;
 
@@ -101,7 +102,7 @@ pub fn run() {
             // Crash if secure boot is not guaranteed.
             let state = init_state(app, path?).expect("secure boot failed");
 
-            app.manage(state);
+            app.manage(Mutex::new(state));
 
             let window = app.get_webview_window("main").unwrap();
 

@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "desktop",
+        "title": "Gravitalia Turms",
         "width": 1200,
         "height": 700,
         "decorations": true,
@@ -22,7 +22,7 @@
     ],
     "macOSPrivateApi": true,
     "security": {
-      "csp": null
+      "csp": "default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self' connect-src 'self' *.gravitalia.com; media-src 'self';"
     }
   },
   "bundle": {
