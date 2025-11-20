@@ -78,6 +78,7 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
 
     // If previously connected, reconnect.
     if let Ok(user) = state.database.get_user(database::Get::Me) {
+        println!("connected user is {user:?}");
         // Restore private and public key to encrypt messages.
         let account = user
             .account

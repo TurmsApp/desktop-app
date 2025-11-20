@@ -57,7 +57,9 @@ impl Database {
             .lock()
             .map_err(|_| anyhow!("mutex is poisoned"))?
             .execute(
-                "INSERT INTO users (id, trust_level, username, relation_date, config, account) VALUES (?, 0, ?, ?, ?, ?)",
+                "INSERT INTO users
+                    (id, trust_level, username, relation_date, config, account)
+                    VALUES (?, 0, ?, ?, ?, ?)",
                 [
                     &user.id as &dyn ToSql,
                     &user.username as &dyn ToSql,
@@ -80,7 +82,9 @@ impl Database {
         match identifier {
             Get::Id(id) => Ok(conn
                 .query_row(
-                    "SELECT username, trust_level, avatar, relation_date, public_key, state, account FROM users WHERE id = ?",
+                    "SELECT
+                        username, trust_level, avatar, relation_date, public_key, state, account
+                        FROM users WHERE id = ?",
                     [id.clone()],
                     move |row| {
                         Ok(User {
@@ -93,7 +97,7 @@ impl Database {
                                 .earliest()
                                 .unwrap_or(Utc::now()),
                             public_key: row.get(4)?,
-                            account: Some(row.get::<usize, String>(6)?).filter(|s| !s.is_empty()),
+                            account: None,
                             ..Default::default()
                         })
                     },
@@ -107,7 +111,7 @@ impl Database {
                 Ok(conn
                 .query_row(
                     "SELECT
-                        id, username, avatar, relation_date, config
+                        id, username, avatar, relation_date, config, account
                         FROM users
                         WHERE config IS NOT NULL AND config <> ''",
                     [],
@@ -123,7 +127,7 @@ impl Database {
                                 .earliest()
                                 .unwrap_or(Utc::now()),
                             config: Some(config),
-                            account: None,
+                            account: Some(row.get::<usize, String>(5)?).filter(|s| !s.is_empty()),
                             ..Default::default()
                         })
                     },
@@ -139,7 +143,10 @@ impl Database {
             .map_err(|_| anyhow!("mutex is poisoned"))?;
 
         let mut statement = conn
-            .prepare("SELECT id, trust_level, username, avatar, relation_date, public_key, state FROM users WHERE config IS NULL OR config = ''")?;
+            .prepare("SELECT
+                        id, trust_level, username, avatar, relation_date, public_key, state
+                        FROM users
+                        WHERE config IS NULL OR config = ''")?;
 
         let users = statement
             .query_map([], |row| {
