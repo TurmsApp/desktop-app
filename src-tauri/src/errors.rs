@@ -10,6 +10,18 @@ fn exit_app(app: &mut App) -> ! {
     std::process::exit(0x0);
 }
 
+/// Fatal error occurs.
+pub fn internal_error(app: &mut App) -> ! {
+    app.dialog()
+        .message(
+            "An internal error has occurred. Please wait for the next update.",
+        )
+        .kind(MessageDialogKind::Error)
+        .title("Internal error")
+        .blocking_show();
+    exit_app(app);
+}
+
 /// Alert user to authorize keyring to access secure key.
 pub fn unauthorized_key(app: &mut App) -> ! {
     app.dialog()

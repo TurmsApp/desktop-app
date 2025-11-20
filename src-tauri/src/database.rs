@@ -40,12 +40,10 @@ impl Database {
     }
 
     /// Insert a user in database.
-    pub fn create_user(
-        &self,
-        user: &User,
-        config: Option<Config>,
-    ) -> Result<()> {
-        let config = config
+    pub fn create_user(&self, user: &User) -> Result<()> {
+        let config = user
+            .config
+            .clone()
             .map(|c| {
                 serde_json::to_string(&c)
                     .map_err(|err| anyhow!("Failed to serialize config: {err}"))
@@ -53,16 +51,19 @@ impl Database {
             .transpose()?
             .unwrap_or_default();
 
+        let account = user.account.clone().unwrap_or_default();
+
         self.connection
             .lock()
             .map_err(|_| anyhow!("mutex is poisoned"))?
             .execute(
-                "INSERT INTO users (id, trust_level, username, relation_date, config) VALUES (?, 0, ?, ?, ?)",
+                "INSERT INTO users (id, trust_level, username, relation_date, config, account) VALUES (?, 0, ?, ?, ?, ?)",
                 [
                     &user.id as &dyn ToSql,
                     &user.username as &dyn ToSql,
                     &Utc::now().timestamp() as &dyn ToSql,
                     &config as &dyn ToSql,
+                    &account as &dyn ToSql,
                 ],
             )?;
 
@@ -70,7 +71,7 @@ impl Database {
     }
 
     /// Get a user from database.
-    pub fn get_user(&self, identifier: Get) -> Result<(User, Option<Config>)> {
+    pub fn get_user(&self, identifier: Get) -> Result<User> {
         let conn = self
             .connection
             .lock()
@@ -79,10 +80,10 @@ impl Database {
         match identifier {
             Get::Id(id) => Ok(conn
                 .query_row(
-                    "SELECT username, trust_level, avatar, relation_date, public_key, state FROM users WHERE id = ?",
+                    "SELECT username, trust_level, avatar, relation_date, public_key, state, account FROM users WHERE id = ?",
                     [id.clone()],
                     move |row| {
-                        Ok((User {
+                        Ok(User {
                             id,
                             username: row.get(0)?,
                             trust_level: row.get(1)?,
@@ -92,7 +93,9 @@ impl Database {
                                 .earliest()
                                 .unwrap_or(Utc::now()),
                             public_key: row.get(4)?,
-                        }, None))
+                            account: Some(row.get::<usize, String>(6)?).filter(|s| !s.is_empty()),
+                            ..Default::default()
+                        })
                     },
                 )?),
             Get::Token(_jwt) => {
@@ -109,7 +112,8 @@ impl Database {
                         WHERE config IS NOT NULL AND config <> ''",
                     [],
                     move |row| {
-                        Ok((User {
+                        let config = serde_json::from_str::<Config>(&row.get::<usize, String>(4)?).unwrap();
+                        Ok(User {
                             id: row.get(0)?,
                             trust_level: 1,
                             username: row.get(1)?,
@@ -118,8 +122,10 @@ impl Database {
                                 .timestamp_opt(row.get::<usize, i64>(3)?, 0)
                                 .earliest()
                                 .unwrap_or(Utc::now()),
+                            config: Some(config),
+                            account: None,
                             ..Default::default()
-                        }, Some(serde_json::from_str(&row.get::<usize, String>(4)?).unwrap())))
+                        })
                     },
                 )?)
             }
@@ -170,6 +176,7 @@ impl Database {
                 avatar          TEXT,
                 relation_date   INTEGER NOT NULL,
                 config          TEXT,
+                account         TEXT,
                 public_key      BLOB,
                 state           BLOB)",
             (),

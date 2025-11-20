@@ -1,27 +1,34 @@
 //! Tauri stuff.
 
 mod database;
+mod deeplink;
 mod errors;
 pub mod models;
 pub(crate) mod service;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use keyring::{Entry, Error::NoEntry};
-use libturms::Turms;
+use libturms::discover::jwt::*;
+use libturms::p2p;
+use libturms::{ConfigFinder, Turms};
 use rand::{Rng, TryRngCore};
-use tauri::{App, Manager};
 use tauri::async_runtime::Mutex;
+use tauri::{App, Manager};
+use tauri_plugin_deep_link::DeepLinkExt;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::database::Database;
 
-#[derive(Debug)]
 pub(crate) struct State {
     /// Handle discovery, p2p, crypto, etc.
     pub turms: Option<Turms>,
+    /// Current connected user.
     pub user: Option<models::user::User>,
+    /// SQLite connection manager.
     pub(crate) database: Database,
+    pub token: TokenManager,
 }
 
 fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
@@ -51,6 +58,7 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
 
     // Init database.
     let db_path = path.join("encrypted.db3");
+    println!("database loaded on {db_path:?}");
     let database = Database::new(&db_path, hex::encode(key))?;
     database
         .create_tables()
@@ -60,16 +68,35 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
         turms: None,
         user: None,
         database,
+        token: TokenManager::new(
+            None,
+            Key::Text::<String>(crate::deeplink::JWT_PUBLIC_KEY.to_string()),
+        )
+        .map_err(|_| errors::internal_error(app))?
+        .algorithm(Algorithm::ES256),
     };
 
     // If previously connected, reconnect.
-    if let Ok((user, config)) = state.database.get_user(database::Get::Me) {
+    if let Ok(user) = state.database.get_user(database::Get::Me) {
+        // Restore private and public key to encrypt messages.
+        let account = user
+            .account
+            .as_ref()
+            .ok_or(anyhow!("missing account entry on database"))?;
+        p2p::restore_account(account)?;
+
+        // Restore previous configuration.
+        let config = serde_yaml::to_string(
+            &user
+                .config
+                .clone()
+                .ok_or(anyhow!("missing config entry on database"))?,
+        )?;
+        let (turms, _receiver) =
+            Turms::from_config(ConfigFinder::<String>::Text(config))?;
+        state.turms = Some(turms);
+
         state.user = Some(user);
-        // Configuration is supplied by default.
-        let config = serde_yaml::to_string(&config.unwrap())?;
-        state.turms = Some(Turms::from_config(
-            libturms::ConfigFinder::<String>::Text(config),
-        )?);
     }
 
     Ok(state)
@@ -78,7 +105,16 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let ctx = tauri::generate_context!();
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    {
+        builder = builder
+            .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}));
+    }
+
+    builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
@@ -101,8 +137,9 @@ pub fn run() {
 
             // Crash if secure boot is not guaranteed.
             let state = init_state(app, path?).expect("secure boot failed");
+            let state = Arc::new(Mutex::new(state));
 
-            app.manage(Mutex::new(state));
+            app.manage(Arc::clone(&state));
 
             let window = app.get_webview_window("main").unwrap();
 
@@ -121,6 +158,21 @@ pub fn run() {
 
             #[cfg(debug_assertions)]
             window.open_devtools();
+
+            // Handle deep linking.
+            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+            app.deep_link().register_all()?;
+
+            let state = Arc::clone(&state);
+            let start_urls = app.deep_link().get_current()?;
+            if let Some(urls) = start_urls {
+                deeplink::handler(Arc::clone(&state), urls);
+            }
+
+            let state = Arc::clone(&state);
+            app.deep_link().on_open_url(move |event| {
+                deeplink::handler(Arc::clone(&state), event.urls());
+            });
 
             window.show()?;
             Ok(())

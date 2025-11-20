@@ -2,6 +2,7 @@
 
 use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
+use libturms::Config;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -19,6 +20,10 @@ pub struct User {
     pub relation: DateTime<Utc>,
     /// User public key.
     pub public_key: Vec<u8>,
+    /// Custom configuration for Turms.
+    pub config: Option<Config>,
+    /// Serialized OLM account for key pair.
+    pub account: Option<String>,
 }
 
 impl User {
@@ -29,5 +34,17 @@ impl User {
             username: username.to_string(),
             ..Default::default()
         }
+    }
+
+    /// Set `config` field.
+    pub fn with_config(mut self, config: Config) -> Self {
+        self.config = Some(config);
+        self
+    }
+
+    /// Set `account` field.
+    pub fn with_account(mut self, account: String) -> Self {
+        self.account = Some(account);
+        self
     }
 }

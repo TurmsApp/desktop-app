@@ -10,7 +10,7 @@ import { invoke } from "@tauri-apps/api/core";
 const router = useRouter();
 
 const openAuthPage = async () => {
-	await open("https://turms.gravitalia.com/auth");
+	await open("https://turms.gravitalia.com/en/auth");
 };
 
 const asGuest = () => {
