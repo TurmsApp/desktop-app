@@ -2,6 +2,7 @@
 
 use libturms::{Config, ConfigFinder, RTCIceServer, Turms};
 use tauri::async_runtime::Mutex;
+use tauri_plugin_log::log;
 
 use std::sync::Arc;
 
@@ -102,13 +103,13 @@ pub fn handler(state: Arc<Mutex<State>>, urls: Vec<tauri::Url>) {
     if let Some(token) = token {
         tauri::async_runtime::spawn(async move {
             if let Err(error) = init(&state, Some(token), None).await {
-                eprintln!("failed to initialize user via deep link: {error:?}",);
+                log::error!("failed to initialize user via deep link: {error:?}",);
             }
         });
     } else {
         tauri::async_runtime::spawn(async move {
             if let Err(error) = init(&state, None, None).await {
-                eprintln!("failed to initialize guest user: {error:?}");
+                log::error!("failed to initialize guest user: {error:?}");
             }
         });
     }

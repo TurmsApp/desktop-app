@@ -13,6 +13,7 @@ use libturms::p2p;
 use libturms::{ConfigFinder, Turms};
 use rand::{Rng, TryRngCore};
 use tauri::async_runtime::Mutex;
+use tauri_plugin_log::log;
 use tauri::{App, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
@@ -58,7 +59,7 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
 
     // Init database.
     let db_path = path.join("encrypted.db3");
-    println!("database loaded on {db_path:?}");
+    log::info!("database loaded on {db_path:?}");
     let database = Database::new(&db_path, hex::encode(key))?;
     database
         .create_tables()
@@ -78,7 +79,7 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
 
     // If previously connected, reconnect.
     if let Ok(user) = state.database.get_user(database::Get::Me) {
-        println!("connected user is {user:?}");
+        log::debug!("connected user is {user:?}");
         // Restore private and public key to encrypt messages.
         let account = user
             .account
@@ -123,6 +124,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_log::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             service::init,
             service::get_user,
