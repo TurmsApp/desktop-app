@@ -53,8 +53,7 @@ pub async fn get_conversations(state: State<'_>) -> Result<Vec<User>, String> {
         .map_err(|_| "failed to get conversations".to_string())
 }
 
-/// Get a [`User`].
-/// If no `id` is specified, get current user.
+/// Generate user WebRTC offer.
 #[tauri::command]
 pub async fn generate_offer(state: State<'_>) -> Result<String, String> {
     if let Some(offer) = state
@@ -70,5 +69,27 @@ pub async fn generate_offer(state: State<'_>) -> Result<String, String> {
         }
     } else {
         Err("no turms".into())
+    }
+}
+
+/// Answer to an offer and generates WebRTC answer.
+#[tauri::command]
+pub async fn connect_peer(
+    state: State<'_>,
+    session: String,
+) -> Result<String, String> {
+    match state.lock().await.turms.as_mut() {
+        Some(turms) => {
+            match turms
+                .connect(&session)
+                .await
+                .map_err(|_| "failed to answer or offer")?
+            {
+                libturms::Session::Offer(offer) => Ok(offer),
+                libturms::Session::Answered => Ok(String::default()),
+                _ => Err("given session is not a session".to_string()),
+            }
+        },
+        None => Err("no turms".to_string()),
     }
 }

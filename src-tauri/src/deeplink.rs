@@ -16,6 +16,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5Ch5+mGfndJIney2+6g7+lbsNMeM
 O9gYi13U3ipzRa13jlButZX+ww32GV5tJnL9RqH+RMQN4UZA0qStZNScoQ==
 -----END PUBLIC KEY-----"#;
 
+const DEFAULT_TURMS_DISCOVERY_URL: &str = "wss://discovery.gravitalia.com";
 const DEFAULT_STUN_SERVER: &str = "stun:stun.l.google.com:19302";
 const AUTH_TURN_SERVER: &str = "turn:turn.gravitalia.com:3478";
 
@@ -35,7 +36,9 @@ pub async fn init(
 
     let config = match token.clone() {
         Some(username) => Config {
-            turms_url,
+            turms_url: Some(
+                turms_url.unwrap_or(DEFAULT_TURMS_DISCOVERY_URL.to_string()),
+            ),
             rtc: vec![
                 RTCIceServer {
                     urls: vec![AUTH_TURN_SERVER.to_string()],
@@ -56,19 +59,24 @@ pub async fn init(
     // libturms configuration.
     let yamlconfig =
         serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
-    let (turms, _receiver) =
+    let (mut turms, _receiver) =
         Turms::from_config(ConfigFinder::<String>::Text(yamlconfig))
             .map_err(|e| e.to_string())?;
+
+    if let Some(ref token) = token {
+        turms = turms.connect_ws(token).await.unwrap();
+    }
+
     locked_state.turms = Some(turms);
 
     // Generate user.
     let mut user = match token {
-        Some(token) => {
+        Some(ref token) => {
             let user = state
                 .lock()
                 .await
                 .token
-                .decode(&token)
+                .decode(token)
                 .map_err(|e| e.to_string())?;
             User::new(&user.subject, &user.subject)
         },
@@ -103,7 +111,9 @@ pub fn handler(state: Arc<Mutex<State>>, urls: Vec<tauri::Url>) {
     if let Some(token) = token {
         tauri::async_runtime::spawn(async move {
             if let Err(error) = init(&state, Some(token), None).await {
-                log::error!("failed to initialize user via deep link: {error:?}",);
+                log::error!(
+                    "failed to initialize user via deep link: {error:?}",
+                );
             }
         });
     } else {

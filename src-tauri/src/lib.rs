@@ -13,9 +13,9 @@ use libturms::p2p;
 use libturms::{ConfigFinder, Turms};
 use rand::{Rng, TryRngCore};
 use tauri::async_runtime::Mutex;
-use tauri_plugin_log::log;
 use tauri::{App, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
+use tauri_plugin_log::log;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -130,6 +130,7 @@ pub fn run() {
             service::get_user,
             service::generate_offer,
             service::get_conversations,
+            service::connect_peer,
         ])
         .setup(|app| {
             let path = if cfg!(debug_assertions) {
