@@ -2,6 +2,8 @@
 
 use tauri::async_runtime::Mutex;
 
+use crate::errors::Result;
+use crate::errors::TurmsError;
 use crate::models::user::User;
 
 use std::sync::Arc;
@@ -14,29 +16,25 @@ pub async fn init(
     state: State<'_>,
     token: Option<String>,
     turms_url: Option<String>,
-) -> Result<(), String> {
+) -> Result<()> {
     crate::deeplink::init(state.inner(), token, turms_url).await
 }
 
 /// Get a [`User`].
 /// If no `id` is specified, get current user.
 #[tauri::command]
-pub async fn get_user(
-    state: State<'_>,
-    id: Option<String>,
-) -> Result<User, String> {
+pub async fn get_user(state: State<'_>, id: Option<String>) -> Result<User> {
     match id {
         Some(id) => Ok(state
             .lock()
             .await
             .database
-            .get_user(crate::database::Get::Id(id))
-            .map_err(|_| "no user".to_string())?),
+            .get_user(crate::database::Get::Id(id))?),
         None => {
             if let Some(user) = state.lock().await.user.clone() {
                 Ok(user)
             } else {
-                Err("no user".into())
+                Err(TurmsError::UserNotExists)
             }
         },
     }
@@ -44,18 +42,13 @@ pub async fn get_user(
 
 /// Get all conversations.
 #[tauri::command]
-pub async fn get_conversations(state: State<'_>) -> Result<Vec<User>, String> {
-    state
-        .lock()
-        .await
-        .database
-        .get_conversations()
-        .map_err(|_| "failed to get conversations".to_string())
+pub async fn get_conversations(state: State<'_>) -> Result<Vec<User>> {
+    state.lock().await.database.get_conversations()
 }
 
 /// Generate user WebRTC offer.
 #[tauri::command]
-pub async fn generate_offer(state: State<'_>) -> Result<String, String> {
+pub async fn generate_offer(state: State<'_>) -> Result<String> {
     if let Some(offer) = state
         .lock()
         .await
@@ -65,31 +58,22 @@ pub async fn generate_offer(state: State<'_>) -> Result<String, String> {
     {
         match offer.await {
             Ok(offer) => Ok(offer),
-            Err(_) => Err("no turms".into()),
+            Err(_) => Err(TurmsError::TurmsInstanceNotInitialized),
         }
     } else {
-        Err("no turms".into())
+        Err(TurmsError::TurmsInstanceNotInitialized)
     }
 }
 
 /// Answer to an offer and generates WebRTC answer.
 #[tauri::command]
-pub async fn connect_peer(
-    state: State<'_>,
-    session: String,
-) -> Result<String, String> {
+pub async fn connect_peer(state: State<'_>, session: String) -> Result<String> {
     match state.lock().await.turms.as_mut() {
-        Some(turms) => {
-            match turms
-                .connect(&session)
-                .await
-                .map_err(|_| "failed to answer or offer")?
-            {
-                libturms::Session::Offer(offer) => Ok(offer),
-                libturms::Session::Answered => Ok(String::default()),
-                _ => Err("given session is not a session".to_string()),
-            }
+        Some(turms) => match turms.connect(&session).await? {
+            libturms::Session::Offer(offer) => Ok(offer),
+            libturms::Session::Answered => Ok(String::default()),
+            _ => Err(TurmsError::InvalidSession),
         },
-        None => Err("no turms".to_string()),
+        None => Err(TurmsError::TurmsInstanceNotInitialized),
     }
 }

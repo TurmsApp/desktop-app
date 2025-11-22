@@ -1151,7 +1151,6 @@ dependencies = [
 name = "desktop"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "chacha20poly1305",
  "chrono",
  "hex",
@@ -1175,6 +1174,7 @@ dependencies = [
  "tauri-plugin-process",
  "tauri-plugin-shell",
  "tauri-plugin-single-instance",
+ "thiserror 2.0.17",
  "url",
  "window-vibrancy",
 ]
@@ -1215,7 +1215,7 @@ dependencies = [
 [[package]]
 name = "discover"
 version = "0.1.0"
-source = "git+https://github.com/TurmsApp/libturms#9add71b2d6a0e75f16cea7afbda58671899295c3"
+source = "git+https://github.com/TurmsApp/libturms#c229fd8b08babd72e2d11fdad601cca844d94465"
 dependencies = [
  "error",
  "futures-util",
@@ -1515,7 +1515,7 @@ dependencies = [
 [[package]]
 name = "error"
 version = "0.1.0"
-source = "git+https://github.com/TurmsApp/libturms#9add71b2d6a0e75f16cea7afbda58671899295c3"
+source = "git+https://github.com/TurmsApp/libturms#c229fd8b08babd72e2d11fdad601cca844d94465"
 dependencies = [
  "jsonwebtoken",
  "reqwest",
@@ -2856,7 +2856,7 @@ dependencies = [
 [[package]]
 name = "libturms"
 version = "0.1.0"
-source = "git+https://github.com/TurmsApp/libturms#9add71b2d6a0e75f16cea7afbda58671899295c3"
+source = "git+https://github.com/TurmsApp/libturms#c229fd8b08babd72e2d11fdad601cca844d94465"
 dependencies = [
  "discover",
  "error",
@@ -3667,7 +3667,7 @@ dependencies = [
 [[package]]
 name = "p2p"
 version = "0.1.0"
-source = "git+https://github.com/TurmsApp/libturms#9add71b2d6a0e75f16cea7afbda58671899295c3"
+source = "git+https://github.com/TurmsApp/libturms#c229fd8b08babd72e2d11fdad601cca844d94465"
 dependencies = [
  "bitflags 2.10.0",
  "bytes",
@@ -5249,9 +5249,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.6"
+version = "1.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2a4719bff48cee6b39d12c020eeb490953ad2443b7055bd0b21fca26bd8c28b"
+checksum = "7664a098b8e616bdfcc2dc0e9ac44eb231eedf41db4e9fe95d8d32ec728dedad"
 dependencies = [
  "libc",
 ]

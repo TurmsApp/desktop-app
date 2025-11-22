@@ -5,8 +5,8 @@ mod deeplink;
 mod errors;
 pub mod models;
 pub(crate) mod service;
+mod tauri_errors;
 
-use anyhow::{Result, anyhow};
 use keyring::{Entry, Error::NoEntry};
 use libturms::discover::jwt::*;
 use libturms::p2p;
@@ -21,6 +21,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::database::Database;
+use crate::errors::Result;
+use crate::errors::TurmsError::MissingEntry;
 
 pub(crate) struct State {
     /// Handle discovery, p2p, crypto, etc.
@@ -34,8 +36,14 @@ pub(crate) struct State {
 
 fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
     // Get security key to decrypt database.
-    let entry = Entry::new("turms", "key")
-        .map_err(|_| errors::unauthorized_key(app))?;
+    let entry = match Entry::new("turms", "key") {
+        Ok(entry) => entry,
+        Err(err) => {
+            log::error!("critical error: {err:?}");
+            tauri_errors::unauthorized_key(app);
+        },
+    };
+
     let key = match entry.get_secret() {
         Ok(key) => key,
         Err(NoEntry) => {
@@ -54,27 +62,34 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
             entry.set_secret(&key).expect("cannot save secure key");
             key
         },
-        Err(_) => errors::unauthorized_key(app),
+        Err(_) => tauri_errors::unauthorized_key(app),
     };
 
     // Init database.
     let db_path = path.join("encrypted.db3");
     log::info!("database loaded on {db_path:?}");
     let database = Database::new(&db_path, hex::encode(key))?;
-    database
-        .create_tables()
-        .map_err(|_| errors::corrupted_db(app, db_path))?;
+    if let Err(err) = database.create_tables() {
+        log::error!("critical error: {err:?}");
+        tauri_errors::corrupted_db(app, db_path);
+    }
+
+    let token = match TokenManager::new(
+        None,
+        Key::Text::<String>(crate::deeplink::JWT_PUBLIC_KEY.to_string()),
+    ) {
+        Ok(manager) => manager.algorithm(Algorithm::ES256),
+        Err(err) => {
+            log::error!("critical error: {err:?}");
+            tauri_errors::internal_error(app);
+        },
+    };
 
     let mut state = State {
         turms: None,
         user: None,
         database,
-        token: TokenManager::new(
-            None,
-            Key::Text::<String>(crate::deeplink::JWT_PUBLIC_KEY.to_string()),
-        )
-        .map_err(|_| errors::internal_error(app))?
-        .algorithm(Algorithm::ES256),
+        token,
     };
 
     // If previously connected, reconnect.
@@ -84,15 +99,12 @@ fn init_state(app: &mut App, path: PathBuf) -> Result<State> {
         let account = user
             .account
             .as_ref()
-            .ok_or(anyhow!("missing account entry on database"))?;
+            .ok_or(MissingEntry("account".into()))?;
         p2p::restore_account(account)?;
 
         // Restore previous configuration.
         let config = serde_yaml::to_string(
-            &user
-                .config
-                .clone()
-                .ok_or(anyhow!("missing config entry on database"))?,
+            &user.config.clone().ok_or(MissingEntry("config".into()))?,
         )?;
         let (turms, _receiver) =
             Turms::from_config(ConfigFinder::<String>::Text(config))?;

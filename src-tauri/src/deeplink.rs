@@ -7,6 +7,7 @@ use tauri_plugin_log::log;
 use std::sync::Arc;
 
 use crate::State;
+use crate::errors::Result;
 use crate::models::user::User;
 
 const GUEST: &str = "Guest";
@@ -25,7 +26,7 @@ pub async fn init(
     state: &Arc<Mutex<State>>,
     token: Option<String>,
     turms_url: Option<String>,
-) -> Result<(), String> {
+) -> Result<()> {
     let token = token.filter(|s| !s.is_empty());
 
     // RTC server configuration.
@@ -57,14 +58,12 @@ pub async fn init(
     let mut locked_state = state.lock().await;
 
     // libturms configuration.
-    let yamlconfig =
-        serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
+    let yamlconfig = serde_yaml::to_string(&config)?;
     let (mut turms, _receiver) =
-        Turms::from_config(ConfigFinder::<String>::Text(yamlconfig))
-            .map_err(|e| e.to_string())?;
+        Turms::from_config(ConfigFinder::<String>::Text(yamlconfig))?;
 
     if let Some(ref token) = token {
-        turms = turms.connect_ws(token).await.unwrap();
+        turms = turms.connect_ws(token).await?;
     }
 
     locked_state.turms = Some(turms);
@@ -72,27 +71,17 @@ pub async fn init(
     // Generate user.
     let mut user = match token {
         Some(ref token) => {
-            let user = state
-                .lock()
-                .await
-                .token
-                .decode(token)
-                .map_err(|e| e.to_string())?;
+            let user = state.lock().await.token.decode(token)?;
             User::new(&user.subject, &user.subject)
         },
         None => User::new(&GUEST.to_lowercase(), &GUEST.to_string()),
     };
 
-    let olm_account = libturms::p2p::save_account()
-        .await
-        .map_err(|_| "security not initialized".to_string())?;
+    let olm_account = libturms::p2p::save_account().await?;
 
     user = user.with_config(config).with_account(olm_account);
 
-    locked_state
-        .database
-        .create_user(&user)
-        .map_err(|_| "user not created".to_string())?;
+    locked_state.database.create_user(&user)?;
     locked_state.user = Some(user);
 
     Ok(())

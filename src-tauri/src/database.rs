@@ -1,6 +1,6 @@
 //! SQLite manager with pre-made queries.
 
-use anyhow::{Result, anyhow};
+use crate::errors::Result;
 use chrono::{TimeZone, Utc};
 use libturms::Config;
 use rusqlite::Connection;
@@ -10,6 +10,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use crate::errors::TurmsError::PoisonedMutex;
 use crate::models::user::User;
 
 /// Methods to identify one or more rows.
@@ -44,40 +45,31 @@ impl Database {
         let config = user
             .config
             .clone()
-            .map(|c| {
-                serde_json::to_string(&c)
-                    .map_err(|err| anyhow!("Failed to serialize config: {err}"))
-            })
+            .map(|c| serde_json::to_string(&c))
             .transpose()?
             .unwrap_or_default();
 
         let account = user.account.clone().unwrap_or_default();
 
-        self.connection
-            .lock()
-            .map_err(|_| anyhow!("mutex is poisoned"))?
-            .execute(
-                "INSERT INTO users
+        self.connection.lock().map_err(|_| PoisonedMutex)?.execute(
+            "INSERT INTO users
                     (id, trust_level, username, relation_date, config, account)
                     VALUES (?, 0, ?, ?, ?, ?)",
-                [
-                    &user.id as &dyn ToSql,
-                    &user.username as &dyn ToSql,
-                    &Utc::now().timestamp() as &dyn ToSql,
-                    &config as &dyn ToSql,
-                    &account as &dyn ToSql,
-                ],
-            )?;
+            [
+                &user.id as &dyn ToSql,
+                &user.username as &dyn ToSql,
+                &Utc::now().timestamp() as &dyn ToSql,
+                &config as &dyn ToSql,
+                &account as &dyn ToSql,
+            ],
+        )?;
 
         Ok(())
     }
 
     /// Get a user from database.
     pub fn get_user(&self, identifier: Get) -> Result<User> {
-        let conn = self
-            .connection
-            .lock()
-            .map_err(|_| anyhow!("mutex is poisoned"))?;
+        let conn = self.connection.lock().map_err(|_| PoisonedMutex)?;
 
         match identifier {
             Get::Id(id) => Ok(conn
@@ -137,10 +129,7 @@ impl Database {
     }
 
     pub fn get_conversations(&self) -> Result<Vec<User>> {
-        let conn = self
-            .connection
-            .lock()
-            .map_err(|_| anyhow!("mutex is poisoned"))?;
+        let conn = self.connection.lock().map_err(|_| PoisonedMutex)?;
 
         let mut statement = conn
             .prepare("SELECT
@@ -170,10 +159,7 @@ impl Database {
 
     /// Create tables if not exists.
     pub fn create_tables(&self) -> Result<()> {
-        let conn = self
-            .connection
-            .lock()
-            .map_err(|_| anyhow!("mutex is poisoned"))?;
+        let conn = self.connection.lock().map_err(|_| PoisonedMutex)?;
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS users (
