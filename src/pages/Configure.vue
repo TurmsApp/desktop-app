@@ -53,7 +53,7 @@ const discoveryUrl = ref("discover.gravitalia.com");
 
 					<!-- Turms Discovery URL. -->
 					<input
-						class="w-[23rem] h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
+						class="w-92 h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
 						type="text"
 						placeholder="URL de Turms discovery"
 						v-model="discoveryUrl"
@@ -85,7 +85,7 @@ const discoveryUrl = ref("discover.gravitalia.com");
 						STUN server URL <span class="text-red-500">*</span>
 					</h3>
 					<input
-						class="w-[23rem] h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
+						class="w-92 h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
 						type="text"
 						placeholder="URL"
 						maxlength="15"
@@ -94,13 +94,13 @@ const discoveryUrl = ref("discover.gravitalia.com");
 					<h3 class="mt-4 font-semibold text-md">STUN server authentication</h3>
 
 					<input
-						class="w-[23rem] h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
+						class="w-92 h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
 						type="text"
 						placeholder="Nom d'utilisateur"
 					/>
 					<div class="mt-2"></div>
 					<input
-						class="w-[23rem] h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
+						class="w-92 h-7 text-sm text-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-300 outline-none bg-transparent border border-zinc-400 dark:border-zinc-700 border-b-2 border-x-0 border-t-0"
 						type="text"
 						placeholder="Mot de passe"
 					/>
@@ -109,10 +109,10 @@ const discoveryUrl = ref("discover.gravitalia.com");
 
 			<!-- Step buttons. -->
 			<div class="mt-16">
-				<PrimaryButton v-if="step < 2" @click="step++" class="w-[23rem]">
+				<PrimaryButton v-if="step < 2" @click="step++" class="w-92">
 					Next
 				</PrimaryButton>
-				<div v-else class="w-[23rem] flex justify-between space-x-4">
+				<div v-else class="w-92 flex justify-between space-x-4">
 					<SecondaryButton v-if="step > 1" @click="step--" class="w-1/2">
 						Previous
 					</SecondaryButton>

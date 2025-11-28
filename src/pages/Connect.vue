@@ -32,20 +32,20 @@ const asGuest = () => {
 		/>
 
 		<PrimaryButton
-			class="mt-16 w-[23rem] h-12 flex justify-center items-center text-zinc-100"
+			class="mt-16 w-92 h-12 flex justify-center items-center text-zinc-100"
 			@click="openAuthPage"
 		>
 			Continue with Gravitalia
 		</PrimaryButton>
 
-		<!-- <div class="flex mt-4 items-center text-center w-[23rem]">
+		<!-- <div class="flex mt-4 items-center text-center w-92">
 			<hr class="border-zinc-600 border-1 w-full rounded-md" />
 			<label class="block font-medium text-sm text-zinc-600 w-full"> OR </label>
 			<hr class="border-zinc-600 border-1 w-full rounded-md" />
 		</div>
 
 		<SecondaryButton
-			class="mt-4 w-[23rem] h-12 flex justify-center items-center"
+			class="mt-4 w-92 h-12 flex justify-center items-center"
 			@click="router.push('/configure')"
 		>
 			Configure your own instance
@@ -54,7 +54,7 @@ const asGuest = () => {
 		<span
 			@click="asGuest"
 			tabindex="0"
-			class="flex cursor-pointer underline mt-6 xl:ml-1 text-md xl:text-lg text-black dark:text-white"
+			class="flex cursor-pointer underline mt-6 xl:ml-1 text-md xl:text-lg text-black dark:text-zinc-300"
 		>
 			For privacy, I prefer to continue as guest
 			<ChevronRightIcon class="mt-1.5 size-4" />

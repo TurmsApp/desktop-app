@@ -12,7 +12,7 @@ import { UserIcon } from "@heroicons/vue/24/outline";
 			</div>
 		</div>
 		<div class="text-sm font-semibold mt-2">Guest</div>
-		<div class="text-xs text-zinc-500">No metadata, no history.</div>
+		<div class="text-xs text-zinc-600 dark:text-zinc-300">No metadata, no history.</div>
 		<div class="flex flex-row items-center mt-3 cursor-not-allowed">
 			<div
 				class="flex flex-col justify-center h-4 w-8 bg-violet-500 rounded-full"

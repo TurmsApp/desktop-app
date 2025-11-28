@@ -1,5 +1,6 @@
 use rand::rand_core;
 use serde::Serialize;
+use tauri_plugin_log::log;
 use thiserror::Error;
 
 /// Custom error type.
@@ -44,6 +45,7 @@ impl Serialize for TurmsError {
     where
         S: serde::Serializer,
     {
+        log::error!("invokation emitted: {:?}", self);
         serializer.serialize_str(&self.to_string())
     }
 }
