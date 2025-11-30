@@ -55,8 +55,6 @@ pub async fn init(
         },
     };
 
-    let mut locked_state = state.lock().await;
-
     // libturms configuration.
     let yamlconfig = serde_yaml::to_string(&config)?;
     let (mut turms, _receiver) =
@@ -66,12 +64,13 @@ pub async fn init(
         turms = turms.connect_ws(token).await?;
     }
 
+    let mut locked_state = state.lock().await;
     locked_state.turms = Some(turms);
 
     // Generate user.
     let mut user = match token {
         Some(ref token) => {
-            let user = state.lock().await.token.decode(token)?;
+            let user = locked_state.token.decode(token)?;
             User::new(&user.subject, &user.subject)
         },
         None => User::new(&GUEST.to_lowercase(), &GUEST.to_string()),

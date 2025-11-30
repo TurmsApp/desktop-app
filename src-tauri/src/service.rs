@@ -68,12 +68,21 @@ pub async fn generate_offer(state: State<'_>) -> Result<String> {
 /// Answer to an offer and generates WebRTC answer.
 #[tauri::command]
 pub async fn connect_peer(state: State<'_>, session: String) -> Result<String> {
-    match state.lock().await.turms.as_mut() {
-        Some(turms) => match turms.connect(&session).await? {
-            libturms::Session::Offer(offer) => Ok(offer),
-            libturms::Session::Answered => Ok(String::default()),
-            _ => Err(TurmsError::InvalidSession),
+    let session = {
+        match state.lock().await.turms.as_mut() {
+            Some(turms) => turms.connect(&session).await?,
+            None => return Err(TurmsError::TurmsInstanceNotInitialized),
+        }
+    };
+
+    match session {
+        libturms::SessionResult::IncomingOffer(offer) => Ok(offer),
+        libturms::SessionResult::Completed(answer) => {
+            // Create peer user on database.
+            let user = User::new(&answer.peer_id, &answer.peer_id)
+                .with_session(answer.session);
+            state.lock().await.database.create_user(&user)?;
+            Ok(answer.peer_id)
         },
-        None => Err(TurmsError::TurmsInstanceNotInitialized),
     }
 }

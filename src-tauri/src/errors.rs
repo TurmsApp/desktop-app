@@ -30,8 +30,6 @@ pub enum TurmsError {
     UserNotExists,
     #[error("turms instance is not initialized")]
     TurmsInstanceNotInitialized,
-    #[error("invalid session type")]
-    InvalidSession,
 
     #[error("missing {0} entry on database")]
     MissingEntry(String),

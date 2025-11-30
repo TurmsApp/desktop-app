@@ -6,6 +6,8 @@ import { invoke } from "@tauri-apps/api/core";
 import AnswerModal from "./AnswerModal.vue";
 import Tooltip from "../Button/Tooltip.vue";
 import { QuestionMarkCircleIcon } from "@heroicons/vue/24/solid";
+import { error } from "@tauri-apps/plugin-log";
+import { useRouter } from "vue-router";
 
 const modal = ref(false);
 const data = reactive({
@@ -13,6 +15,7 @@ const data = reactive({
 	peerId: "",
 	answer: "",
 });
+const router = useRouter();
 
 const copyIdentifier = () => {
 	navigator.clipboard.writeText(data.identifier);
@@ -25,8 +28,13 @@ onMounted(async () => {
 const requestConversation = async () => {
 	if (data.peerId === "") return;
 
-	data.answer = await invoke("connect_peer", { session: data.peerId });
-	if (data.answer !== "") modal.value = true;
+	try {
+		data.answer = await invoke("connect_peer", { session: data.peerId });
+		if (data.answer !== "" && data.answer.includes("type")) modal.value = true;
+		else if (data.answer !== "") router.push(`/conversation/${data.answer}`);
+	} catch (err) {
+		error("peer connection failed", { keyValues: { err: err as string } });
+	}
 };
 </script>
 

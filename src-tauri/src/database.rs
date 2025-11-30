@@ -75,7 +75,7 @@ impl Database {
             Get::Id(id) => Ok(conn
                 .query_row(
                     "SELECT
-                        username, trust_level, avatar, relation_date, public_key, state, account
+                        username, trust_level, avatar, relation_date, session, state, account
                         FROM users WHERE id = ?",
                     [id.clone()],
                     move |row| {
@@ -88,7 +88,7 @@ impl Database {
                                 .timestamp_opt(row.get::<usize, i64>(3)?, 0)
                                 .earliest()
                                 .unwrap_or(Utc::now()),
-                            public_key: row.get(4)?,
+                            session: row.get(4)?,
                             account: None,
                             ..Default::default()
                         })
@@ -133,7 +133,7 @@ impl Database {
 
         let mut statement = conn
             .prepare("SELECT
-                        id, trust_level, username, avatar, relation_date, public_key, state
+                        id, trust_level, username, avatar, relation_date, session, state
                         FROM users
                         WHERE config IS NULL OR config = ''")?;
 
@@ -148,7 +148,7 @@ impl Database {
                         .timestamp_opt(row.get::<usize, i64>(4)?, 0)
                         .earliest()
                         .unwrap_or(Utc::now()),
-                    //public_key: row.get(5)?,
+                    session: row.get(5)?,
                     ..Default::default()
                 })
             })?
@@ -170,7 +170,7 @@ impl Database {
                 relation_date   INTEGER NOT NULL,
                 config          TEXT,
                 account         TEXT,
-                public_key      BLOB,
+                session         TEXT,
                 state           BLOB)",
             (),
         )?;

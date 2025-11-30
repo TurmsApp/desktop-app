@@ -18,8 +18,8 @@ pub struct User {
     /// Date on which the two users first communicated.
     #[serde(with = "ts_milliseconds")]
     pub relation: DateTime<Utc>,
-    /// User public key.
-    pub public_key: Vec<u8>,
+    /// User session.
+    pub session: Option<String>,
     /// Custom configuration for Turms.
     pub config: Option<Config>,
     /// Serialized OLM account for key pair.
@@ -45,6 +45,12 @@ impl User {
     /// Set `account` field.
     pub fn with_account(mut self, account: String) -> Self {
         self.account = Some(account);
+        self
+    }
+
+    /// Set `session` field.
+    pub fn with_session(mut self, session: Option<String>) -> Self {
+        self.session = session;
         self
     }
 }

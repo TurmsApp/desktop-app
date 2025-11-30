@@ -127,6 +127,12 @@ pub fn run() {
             .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}));
     }
 
+    let level = if cfg!(debug_assertions) {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Info
+    };
+
     builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_process::init())
@@ -136,7 +142,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_log::Builder::new().level(level).build())
         .invoke_handler(tauri::generate_handler![
             service::init,
             service::get_user,
